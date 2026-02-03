@@ -3,39 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>龍舟打卡</title>
+    <title>派兜打卡</title>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; padding-top: 50px; background: #f0f0f0; }
-        .btn { padding: 20px 40px; font-size: 20px; cursor: pointer; background: #00B900; color: white; border: none; border-radius: 10px; display: none; margin: auto; }
+        body { font-family: -apple-system, sans-serif; text-align: center; background: #f8f9fa; padding-top: 50px; }
+        .container { background: white; width: 85%; max-width: 400px; margin: auto; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+        .btn { padding: 18px 0; width: 100%; font-size: 1.2rem; cursor: pointer; background: #00B900; color: white; border: none; border-radius: 12px; display: none; font-weight: 600; }
+        #status { color: #888; margin: 20px 0; font-size: 0.9rem; }
     </style>
 </head>
 <body>
-    <h2 id="msg">身分驗證中...</h2>
-    <button id="btn" class="btn">確認報到</button>
+    <div class="container">
+        <h2 id="msg">身分驗證中...</h2>
+        <div id="status">點擊下方按鈕完成今日打卡</div>
+        <button id="checkInBtn" class="btn">確認報到</button>
+    </div>
 
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbx5_T2WF-VYl22q9YITUGkqt-2wNaG-6WXivCnzcbi1LMxKT8-bTBvtYmRNBB2pd4uj/exec"; // 貼上剛剛部署完的 exec 網址
-        const LIFF_ID = "2009026488-y3Tjhqh5";     // 貼上 LINE Developers 的 LIFF ID
+        const LIFF_ID = "2009026488-y3Tjhqh5";     // 貼上 LINE Developers 的 LIFF ID    
 
         async function main() {
             try {
                 await liff.init({ liffId: LIFF_ID });
-                if (!liff.isLoggedIn()) {
-                    liff.login();
-                    return;
-                }
+                if (!liff.isLoggedIn()) { liff.login(); return; }
 
                 const profile = await liff.getProfile();
                 document.getElementById("msg").innerText = "你好，" + profile.displayName;
-                const btn = document.getElementById("btn");
+                const btn = document.getElementById("checkInBtn");
                 btn.style.display = "block";
 
                 btn.onclick = async () => {
                     btn.disabled = true;
                     btn.innerText = "傳送中...";
                     
-                    // 使用最簡單的傳送方式，避免 CORS 預檢請求失敗
                     try {
                         await fetch(GAS_URL, {
                             method: "POST",
@@ -46,17 +48,26 @@
                                 userId: profile.userId
                             })
                         });
-                        
-                        alert("✅ 打卡成功！");
-                        liff.closeWindow();
+
+                        // 使用 SweetAlert2 取代原生 alert
+                        Swal.fire({
+                            title: '派兜打卡',
+                            text: '✅ 打卡成功！\n請努力划船！',
+                            icon: 'success',
+                            confirmButtonText: '確定',
+                            confirmButtonColor: '#00B900'
+                        }).then(() => {
+                            liff.closeWindow();
+                        });
+
                     } catch (err) {
-                        alert("傳送失敗，請檢查網路：" + err);
+                        Swal.fire('錯誤', '連線失敗，請稍後再試', 'error');
                         btn.disabled = false;
                         btn.innerText = "重新報到";
                     }
                 };
             } catch (error) {
-                document.getElementById("msg").innerText = "初始化失敗：" + error;
+                document.getElementById("msg").innerText = "初始化失敗";
             }
         }
         main();
